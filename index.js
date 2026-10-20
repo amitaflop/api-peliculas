@@ -21,7 +21,7 @@ const pool = new Pool(
       }
 );
 
-// Inicializar la base de datos (¡Ya sin borrar la tabla para proteger tus datos!)
+// Inicializar la base de datos protegiendo los datos existentes
 async function inicializarDB() {
   try {
     await pool.query(`
@@ -58,7 +58,23 @@ app.get('/peliculas', async (req, res) => {
   }
 });
 
-// 2. CREAR una o varias películas (POST - Soporta objeto único o arreglo masivo)
+// 2. OBTENER una película por su ID (GET por ID) 👈 NUEVA RUTA
+app.get('/peliculas/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const resultado = await pool.query('SELECT * FROM peliculas WHERE id = $1', [id]);
+    
+    if (resultado.rows.length === 0) {
+      return res.status(404).json({ mensaje: "Película no encontrada 😢" });
+    }
+    
+    res.json(resultado.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 3. CREAR una o varias películas (POST - Soporta objeto único o arreglo masivo)
 app.post('/peliculas', async (req, res) => {
   try {
     const data = req.body;
