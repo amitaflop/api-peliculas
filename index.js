@@ -5,7 +5,7 @@ require('dotenv').config();
 const app = express();
 app.use(express.json());
 
-// Conexión apuntando explícitamente al puerto 5433
+// Conexión a la base de datos (Render o local)
 const pool = new Pool(
   process.env.DATABASE_URL
     ? {
@@ -21,17 +21,19 @@ const pool = new Pool(
       }
 );
 
-// Inicializar la tabla de películas
+// Inicializar la tabla de películas con todos los campos requeridos
 pool.query(`
   CREATE TABLE IF NOT EXISTS peliculas (
     id SERIAL PRIMARY KEY,
     titulo VARCHAR(150) NOT NULL,
     director VARCHAR(100) NOT NULL,
-    anio INT
+    anio INT,
+    genero VARCHAR(100),
+    descripcion TEXT
   );
 `)
 .then(() => {
-  console.log('Base de datos inicializada correctamente (tabla peliculas creada).');
+  console.log('Base de datos inicializada correctamente (tabla peliculas creada con género y descripción).');
 })
 .catch(err => {
   console.error('Error al inicializar la base de datos:', err);
@@ -52,16 +54,41 @@ app.get('/peliculas', async (req, res) => {
   }
 });
 
-// 2. CREAR una película (POST)
+// 2. CREAR una o varias películas (POST - Soporta objeto único o arreglo masivo)
 app.post('/peliculas', async (req, res) => {
-  const { titulo, director, anio } = req.body;
   try {
-    const resultado = await pool.query(
-      'INSERT INTO peliculas (titulo, director, anio) VALUES ($1, $2, $3) RETURNING *',
-      [titulo, director, anio]
-    );
-    res.status(201).json(resultado.rows[0]);
+    const data = req.body;
+
+    // Si mandan un arreglo (varias películas a la vez)
+    if (Array.isArray(data)) {
+      const insertedMovies = [];
+      for (const pelicula of data) {
+        const { titulo, director, anio, genero, descripcion } = pelicula;
+        const resultado = await pool.query(
+          'INSERT INTO peliculas (titulo, director, anio, genero, descripcion) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+          [titulo, director, anio, genero, descripcion]
+        );
+        insertedMovies.push(resultado.rows[0]);
+      }
+      return res.status(201).json({
+        mensaje: "Películas agregadas exitosamente en lote 🎬",
+        total: insertedMovies.length,
+        peliculas: insertedMovies
+      });
+    } 
+    
+    // Si mandan una sola película
+    else {
+      const { titulo, director, anio, genero, descripcion } = data;
+      const resultado = await pool.query(
+        'INSERT INTO peliculas (titulo, director, anio, genero, descripcion) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+        [titulo, director, anio, genero, descripcion]
+      );
+      return res.status(201).json(resultado.rows[0]);
+    }
+
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: err.message });
   }
 });
