@@ -21,23 +21,33 @@ const pool = new Pool(
       }
 );
 
-// Inicializar la tabla de películas con todos los campos requeridos
-pool.query(`
-  CREATE TABLE IF NOT EXISTS peliculas (
-    id SERIAL PRIMARY KEY,
-    titulo VARCHAR(150) NOT NULL,
-    director VARCHAR(100) NOT NULL,
-    anio INT,
-    genero VARCHAR(100),
-    descripcion TEXT
-  );
-`)
-.then(() => {
-  console.log('Base de datos inicializada correctamente (tabla peliculas creada con género y descripción).');
-})
-.catch(err => {
-  console.error('Error al inicializar la base de datos:', err);
-});
+// Inicializar la tabla de películas y asegurar columnas
+async function inicializarDB() {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS peliculas (
+        id SERIAL PRIMARY KEY,
+        titulo VARCHAR(150) NOT NULL,
+        director VARCHAR(100) NOT NULL,
+        anio INT,
+        genero VARCHAR(100),
+        descripcion TEXT
+      );
+    `);
+
+    // Asegurar que las columnas existan aunque la tabla ya fuera creada antes
+    await pool.query(`
+      ALTER TABLE peliculas ADD COLUMN IF NOT EXISTS genero VARCHAR(100);
+      ALTER TABLE peliculas ADD COLUMN IF NOT EXISTS descripcion TEXT;
+    `);
+
+    console.log('Base de datos inicializada y columnas verificadas correctamente 🎬');
+  } catch (err) {
+    console.error('Error al inicializar la base de datos:', err);
+  }
+}
+
+inicializarDB();
 
 // Ruta principal
 app.get('/', (req, res) => {
