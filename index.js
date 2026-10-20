@@ -21,14 +21,11 @@ const pool = new Pool(
       }
 );
 
-// Inicializar la base de datos recreando la tabla limpia con todas las columnas
+// Inicializar la base de datos (¡Ya sin borrar la tabla para proteger tus datos!)
 async function inicializarDB() {
   try {
-    // Recreamos la tabla desde cero para asegurar que tenga todas las columnas nuevas
-    await pool.query(`DROP TABLE IF EXISTS peliculas;`);
-
     await pool.query(`
-      CREATE TABLE peliculas (
+      CREATE TABLE IF NOT EXISTS peliculas (
         id SERIAL PRIMARY KEY,
         titulo VARCHAR(150) NOT NULL,
         director VARCHAR(100) NOT NULL,
@@ -38,7 +35,7 @@ async function inicializarDB() {
       );
     `);
 
-    console.log('Base de datos reiniciada y tabla creada con todos los campos 🎬');
+    console.log('Base de datos y tabla verificadas correctamente 🎬');
   } catch (err) {
     console.error('Error al inicializar la base de datos:', err);
   }
